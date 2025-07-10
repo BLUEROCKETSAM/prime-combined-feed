@@ -1,5 +1,6 @@
-const Parser = require("rss-parser");
-const fs = require("fs");
+import Parser from "rss-parser";
+import fs from "fs";
+
 const parser = new Parser();
 
 (async () => {
@@ -17,12 +18,11 @@ const parser = new Parser();
       link: item.link,
       pubDate: item.pubDate,
       description: item.contentSnippet || "",
-      thumbnail: item.enclosure?.url || "" // fallback if there's a media image
+      thumbnail: item.enclosure?.url || ""
     }));
     allItems = allItems.concat(items);
   }
 
-  // Sort items by date descending
   allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
   fs.writeFileSync("docs/latest.json", JSON.stringify(allItems, null, 2));
