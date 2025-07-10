@@ -1,61 +1,58 @@
 import Parser from 'rss-parser';
+import fetch from 'node-fetch';
+import cheerio from 'cheerio';
 import { writeFileSync } from 'fs';
 
-const parser = new Parser({
-  customFields: {
-    item: [
-      ['media:content', 'mediaContent'],
-      ['media:thumbnail', 'mediaThumbnail'],
-      ['content:encoded', 'contentEncoded']
-    ]
-  }
-});
+const parser = new Parser();
 
 const feedUrls = [
-  'https://www.primecenter.org/prime-blog/feed/',
-  'https://www.primecenter.org/prime-news/feed/'
+  'https://www.primecenter.org/prime-blog?format=rss',
+  'https://www.primecenter.org/prime-in-the-news?format=rss'
 ];
 
 const DEFAULT_IMAGE = 'https://www.primecenter.org/wp-content/uploads/2023/04/PRiME-Logo-Full-Color-Square.png';
 
-// Extracts first image src from HTML string
-function extractImageFromHTML(html) {
-  if (!html) return null;
-  const match = html.match(/<img[^>]+src="([^">]+)"/i);
-  return match ? match[1] : null;
+// Extract image from <meta property="og:image"> or first <img>
+async function fetchThumbnailFromPage(url) {
+  try {
+    const res = await fetch(url);
+    const html = await res.text();
+    const $ = cheerio.load(html);
+
+    let image = $('meta[property="og:image"]').attr('content');
+    if (!image) {
+      image = $('img').first().attr('src');
+    }
+
+    return image || DEFAULT_IMAGE;
+  } catch (err) {
+    console.error(`Error fetching thumbnail from ${url}:`, err.message);
+    return DEFAULT_IMAGE;
+  }
 }
 
-const fetchFeeds = async () => {
+async function generateFeed() {
   let allItems = [];
 
-  for (const url of feedUrls) {
-    const feed = await parser.parseURL(url);
-    const items = feed.items.map(item => {
-      const htmlImage = extractImageFromHTML(item.contentEncoded);
-      const thumbnail =
-        htmlImage ||
-        item.enclosure?.url ||
-        item.mediaThumbnail?.url ||
-        item.mediaContent?.url ||
-        DEFAULT_IMAGE;
-
-      return {
+  for (const feedUrl of feedUrls) {
+    const feed = await parser.parseURL(feedUrl);
+    for (const item of feed.items) {
+      const thumbnail = await fetchThumbnailFromPage(item.link);
+      allItems.push({
         title: item.title,
         link: item.link,
         pubDate: item.pubDate,
-        thumbnail,
-        description: item.contentSnippet || ''
-      };
-    });
-
-    allItems.push(...items);
+        thumbnail: thumbnail,
+        description: item.contentSnippet || item.content || ''
+      });
+    }
   }
 
-  // Sort and limit to 3 posts
+  // Sort and take latest 3
   allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-  const topThree = allItems.slice(0, 3);
+  const latest = allItems.slice(0, 3);
 
-  writeFileSync('docs/latest.json', JSON.stringify(topThree, null, 2));
-};
+  writeFileSync('docs/latest.json', JSON.stringify(latest, null, 2));
+}
 
-fetchFeeds().catch(console.error);
+generateFeed();
