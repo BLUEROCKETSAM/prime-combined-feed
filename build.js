@@ -1,6 +1,6 @@
 import Parser from 'rss-parser';
 import fetch from 'node-fetch';
-import cheerio from 'cheerio';
+import { load } from 'cheerio'; // ✅ FIXED: ESM-compatible import
 import { writeFileSync } from 'fs';
 
 const parser = new Parser();
@@ -12,12 +12,11 @@ const feedUrls = [
 
 const DEFAULT_IMAGE = 'https://www.primecenter.org/wp-content/uploads/2023/04/PRiME-Logo-Full-Color-Square.png';
 
-// Extract image from <meta property="og:image"> or first <img>
 async function fetchThumbnailFromPage(url) {
   try {
     const res = await fetch(url);
     const html = await res.text();
-    const $ = cheerio.load(html);
+    const $ = load(html); // ✅ FIXED: use 'load' instead of 'cheerio.load'
 
     let image = $('meta[property="og:image"]').attr('content');
     if (!image) {
