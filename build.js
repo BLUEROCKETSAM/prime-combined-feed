@@ -1,32 +1,29 @@
-import Parser from 'rss-parser';
-import fs from 'fs';
-
+const Parser = require("rss-parser");
+const fs = require("fs");
 const parser = new Parser();
-const urls = [
-  'https://www.primecenter.org/prime-blog?format=rss',
-  'https://www.primecenter.org/prime-in-the-news?format=rss'
-];
 
-let all = [];
+(async () => {
+  const feeds = [
+    "https://www.primecenter.org/prime-blog?format=rss",
+    "https://www.primecenter.org/prime-in-the-news?format=rss"
+  ];
 
-for (const u of urls) {
-  try {
-    const feed = await parser.parseURL(u);
-    const items = feed.items.map(i => ({
-      title: i.title,
-      link: i.link,
-      pubDate: new Date(i.pubDate).toISOString(),
-      thumbnail: i.enclosure?.url || '',
-      description: i.contentSnippet || ''
+  let allItems = [];
+
+  for (const feedUrl of feeds) {
+    const feed = await parser.parseURL(feedUrl);
+    const items = feed.items.map(item => ({
+      title: item.title,
+      link: item.link,
+      pubDate: item.pubDate,
+      description: item.contentSnippet || "",
+      thumbnail: item.enclosure?.url || "" // fallback if there's a media image
     }));
-    all = all.concat(items);
-  } catch (e) {
-    console.warn(`Failed to fetch ${u}:`, e.message);
+    allItems = allItems.concat(items);
   }
-}
 
-all.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-const latest = all.slice(0, 3);
+  // Sort items by date descending
+  allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-// ✅ Write into /docs/
-fs.writeFileSync('docs/latest.json', JSON.stringify(latest, null, 2));
+  fs.writeFileSync("docs/latest.json", JSON.stringify(allItems, null, 2));
+})();
