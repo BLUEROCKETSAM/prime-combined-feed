@@ -27,5 +27,4 @@ for (const u of urls) {
 
 all.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 const latest = all.slice(0, 3);
-fs.writeFileSync('latest.json', JSON.stringify(latest, null, 2));
-
+fs.writeFileSync('docs/latest.json', JSON.stringify(latest, null, 2));
