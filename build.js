@@ -1,37 +1,44 @@
 import Parser from 'rss-parser';
 import fetch from 'node-fetch';
-import { load } from 'cheerio'; // ✅ FIXED: ESM-compatible import
+import { load } from 'cheerio';
 import { writeFileSync } from 'fs';
 
 const parser = new Parser();
+const DEFAULT_IMAGE = 'https://www.primecenter.org/wp-content/uploads/2023/04/PRiME-Logo-Full-Color-Square.png';
 
 const feedUrls = [
   'https://www.primecenter.org/prime-blog?format=rss',
   'https://www.primecenter.org/prime-in-the-news?format=rss'
 ];
 
-const DEFAULT_IMAGE = 'https://www.primecenter.org/wp-content/uploads/2023/04/PRiME-Logo-Full-Color-Square.png';
-
+// Fetch og:image or first <img> from HTML
 async function fetchThumbnailFromPage(url) {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      }
+    });
     const html = await res.text();
-    const $ = load(html); // ✅ FIXED: use 'load' instead of 'cheerio.load'
+    const $ = load(html);
 
     let image = $('meta[property="og:image"]').attr('content');
-    if (!image) {
-      image = $('img').first().attr('src');
-    }
+    if (!image) image = $('img').first().attr('src');
 
-    return image || DEFAULT_IMAGE;
+    // Normalize image URL
+    if (!image || image.trim() === '') return DEFAULT_IMAGE;
+    if (image.startsWith('//')) image = 'https:' + image;
+    else if (image.startsWith('/')) image = new URL(url).origin + image;
+
+    return image;
   } catch (err) {
-    console.error(`Error fetching thumbnail from ${url}:`, err.message);
+    console.error(`Failed to fetch image for ${url}:`, err.message);
     return DEFAULT_IMAGE;
   }
 }
 
 async function generateFeed() {
-  let allItems = [];
+  const allItems = [];
 
   for (const feedUrl of feedUrls) {
     const feed = await parser.parseURL(feedUrl);
@@ -41,17 +48,26 @@ async function generateFeed() {
         title: item.title,
         link: item.link,
         pubDate: item.pubDate,
-        thumbnail: thumbnail,
-        description: item.contentSnippet || item.content || ''
+        description: item.contentSnippet || item.content || '',
+        thumbnail
       });
     }
   }
 
-  // Sort and take latest 3
-  allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-  const latest = allItems.slice(0, 3);
+  // Remove duplicate posts by link
+  const seen = new Set();
+  const uniqueItems = allItems.filter(item => {
+    if (seen.has(item.link)) return false;
+    seen.add(item.link);
+    return true;
+  });
+
+  // Sort by pubDate descending and take top 4
+  uniqueItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+  const latest = uniqueItems.slice(0, 4);
 
   writeFileSync('docs/latest.json', JSON.stringify(latest, null, 2));
+  console.log('✅ latest.json updated with', latest.length, 'posts');
 }
 
 generateFeed();
