@@ -2,9 +2,10 @@
   "name": "prime-combined-feed",
   "version": "1.0.0",
   "description": "Fetch and merge blog feeds from PRiME",
-  "main": "build.js",
   "type": "module",
   "dependencies": {
-    "rss-parser": "^3.12.0"
+    "rss-parser": "^3.12.0",
+    "node-fetch": "^2.6.9",
+    "cheerio": "^1.0.0-rc.12"
   }
 }
