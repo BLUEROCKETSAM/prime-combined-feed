@@ -15,12 +15,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
+  
+      - run: npm install rss-parser@3.12.0 node-fetch cheerio
 
-      - name: Install dependencies
-        run: |
-          npm uninstall rss-parser
-          npm install rss-parser@3.12.2
-          npm install node-fetch cheerio
 
       - run: node build.js
 
