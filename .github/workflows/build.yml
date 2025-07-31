@@ -2,7 +2,7 @@ name: Build Feed JSON
 
 on:
   schedule:
-  - cron: '*/5 * * * *'  # Every 5 minutes
+    - cron: '*/5 * * * *'  # Every 5 minutes
 
   workflow_dispatch:
 
@@ -16,7 +16,11 @@ jobs:
         with:
           node-version: 18
 
-      - run: npm install rss-parser node-fetch cheerio
+      - name: Install dependencies
+        run: |
+          npm uninstall rss-parser
+          npm install rss-parser@2.12.2
+          npm install node-fetch cheerio
 
       - run: node build.js
 
