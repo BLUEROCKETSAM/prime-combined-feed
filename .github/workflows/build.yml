@@ -3,23 +3,25 @@ name: Build Feed JSON
 on:
   schedule:
     - cron: '*/5 * * * *'  # Every 5 minutes
-
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Set Up Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 18
-  
-      - run: npm install rss-parser@3.12.0 node-fetch cheerio
+          node-version: '20.11.0'  # 👈 Node 20 supports global File
 
+      - name: Install Dependencies
+        run: npm install rss-parser@3.12.0 node-fetch cheerio
 
-      - run: node build.js
+      - name: Run build.js
+        run: node build.js
 
       - name: Commit and Push Feed JSON
         env:
@@ -29,8 +31,4 @@ jobs:
           git config user.email actions@github.com
           git add docs/latest.json
           git commit -m "Update feed" || echo "No changes to commit"
-          git push https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git HEAD:m
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20.11.0'
-
+          git push https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git HEAD:main
