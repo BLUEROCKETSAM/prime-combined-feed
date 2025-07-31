@@ -1,3 +1,5 @@
+globalThis.File = class File {}; // Mock File to avoid crash in undici
+
 import Parser from 'rss-parser';
 import fetch from 'node-fetch';
 import { load } from 'cheerio';
